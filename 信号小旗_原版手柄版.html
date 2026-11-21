@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>《信号小旗》</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Google+Sans+Code:wght@400;600&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-canvas: rgb(250,255,255);
+    --bg-stage: rgb(250,248,244);
+    --paper: #F4F1EA;
+    --amber: #F5A623;
+    --amber-dark: #D28B3F;
+    --cyan: #62AAD2;
+    --crimson: #D04764;
+    --emerald: #2E8B57;
+  }
+
+  * { box-sizing: border-box; user-select: none; }
+
+  body {
+    margin: 0;
+    background: var(--bg-canvas);
+    color: #F4F5F7;
+    font-family: 'Noto Sans SC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .font-display { font-family: 'Barlow Condensed', 'Noto Sans SC', sans-serif; }
+  .font-mono-code { font-family: 'Google Sans Code', monospace; }
+
+  /* West Daredevil Slanted Divider */
+  .roster-divider {
+    clip-path: polygon(45% 0, 100% 0, 100% 100%, 35% 100%);
+  }
+
+  /* Manila Folder / Stamp Card */
+  .stamp-card {
+    background: var(--paper);
+    color: #111317;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
+    position: relative;
+  }
+
+  /* White Sticker Outline Effect */
+  .sticker-outline {
+    filter: drop-shadow(0 0 0 #FFFFFF) drop-shadow(2px 0 0 #FFFFFF) drop-shadow(-2px 0 0 #FFFFFF) drop-shadow(0 2px 0 #FFFFFF) drop-shadow(0 -2px 0 #FFFFFF);
+  }
+
+  .glow-correct {
+    filter: drop-shadow(0 0 18px #2E8B57) drop-shadow(0 0 6px #4ADE80);
+  }
+
+  .glow-fast {
+    filter: drop-shadow(0 0 20px #F5A623) drop-shadow(0 0 8px #FDE68A);
+  }
+
+  .glow-ultra {
+    filter: drop-shadow(0 0 22px #FFFFFF) drop-shadow(0 0 10px #FDE68A) drop-shadow(0 0 4px #F5A623);
+  }
+
+  .glow-slow {
+    filter: drop-shadow(0 0 14px rgba(98,170,210,.6)) drop-shadow(0 0 5px rgba(147,197,253,.5));
+  }
+
+  .glow-wrong {
+    filter: drop-shadow(0 0 18px #D04764) drop-shadow(0 0 6px #FB7185);
+  }
+
+  @keyframes flag-bounce {
+    0%   { transform: translateY(0) scale(1); }
+    30%  { transform: translateY(-9px) scale(1.045); }
+    62%  { transform: translateY(2px) scale(0.985); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  @keyframes flag-shake {
+    0%, 100% { transform: translateX(0); }
+    22% { transform: translateX(-6px); }
+    48% { transform: translateX(6px); }
+    72% { transform: translateX(-3px); }
+    90% { transform: translateX(2px); }
+  }
+  .flag-bounce { animation: flag-bounce .4s cubic-bezier(.2,.9,.3,1.25); }
+  .flag-shake  { animation: flag-shake .32s ease; }
+
+  /* 连击粒子 + 超神闪光（装饰性，pointer-events: none） */
+  @keyframes sparkle-pop {
+    0%   { transform: translate(0, 0) scale(.3); opacity: 0; }
+    25%  { opacity: 1; }
+    100% { transform: translate(var(--sx), var(--sy)) scale(.9); opacity: 0; }
+  }
+  .sparkle-dot {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    pointer-events: none;
+    animation: sparkle-pop .6s ease-out forwards;
+  }
+  .sparkle-star {
+    width: 8px;
+    height: 8px;
+    border-radius: 0;
+    clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
+  }
+  @keyframes ultra-flash {
+    0%   { transform: scale(.35); opacity: .95; }
+    100% { transform: scale(1.7); opacity: 0; }
+  }
+  .ultra-flash {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 84px;
+    height: 84px;
+    margin: -42px 0 0 -42px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(253,230,138,.4) 45%, rgba(255,255,255,0) 70%);
+    pointer-events: none;
+    animation: ultra-flash .38s ease-out forwards;
+  }
+
+  @keyframes score-pop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+  .hud-score-pop {
+    display: inline-block;
+    color: #FFFFFF;
+    text-shadow: 0 0 10px rgba(255,255,255,.5);
+    animation: score-pop .32s cubic-bezier(.2,.9,.3,1.45);
+  }
+
+  /* Physical Joystick Base & Knob */
+  .stick-well {
+    width: 112px;
+    height: 112px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 50% 50%, #0B0C0E 0%, #1F2329 75%, #2D323B 100%);
+    border: 3px solid #374151;
+    position: relative;
+    touch-action: none;
+    cursor: grab;
+  }
+  .stick-well:active { cursor: grabbing; }
+
+  .stick-knob {
+    width: 52px;
+    height: 52px;
+    border-radius: 9999px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: transform 0.08s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.35);
+  }
+
+  /* Physical Arcade Button */
+  .arcade-btn {
+    width: 84px;
+    height: 84px;
+    border-radius: 9999px;
+    border: 4px solid #111317;
+    box-shadow: 0 7px 0 #090A0C, 0 10px 16px rgba(0,0,0,0.5);
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+  }
+  .arcade-btn.pressed, .arcade-btn:active {
+    transform: translateY(5px);
+    box-shadow: 0 2px 0 #090A0C, 0 4px 6px rgba(0,0,0,0.4);
+  }
+
+  /* Signal Wire Pulse */
+  .wire-active-left {
+    stroke: #F5A623;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 6px #F5A623);
+  }
+  .wire-active-right {
+    stroke: #62AAD2;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 6px #62AAD2);
+  }
+
+  /* Countdown Pulse */
+  @keyframes pulseFast {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  .timer-urgent {
+    animation: pulseFast 0.6s infinite;
+    color: #D04764 !important;
+  }
+
+  /* Focus Ring for Joystick Menu Navigation (buttons) */
+  .hw-focus {
+    outline: 4px solid #F5A623;
+    outline-offset: 4px;
+    transform: translateY(-2px);
+  }
+
+  /* === LEVEL SELECT / TIME SELECT: card focus + micro-motion === */
+  .level-card,
+  .duration-card {
+    transition: transform .22s cubic-bezier(.2, .9, .3, 1.15), box-shadow .22s ease, opacity .2s ease;
+    will-change: transform;
+  }
+  .level-card.hw-focus,
+  .duration-card.hw-focus {
+    outline: none;
+    outline-offset: 0;
+    transform: translateY(-6px) rotate(-.5deg);
+    box-shadow: 12px 14px 0 rgba(0, 0, 0, .5);
+  }
+  .level-card.hw-focus::after,
+  .duration-card.hw-focus::after {
+    content: 'READY';
+    position: absolute;
+    top: -11px;
+    left: -8px;
+    background: #D04764;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    padding: 3px 7px;
+    transform: rotate(-9deg);
+    border: 1.5px solid #fff;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .45);
+  }
+  @media (hover: hover) {
+    .level-card:not(.hw-focus):hover,
+    .duration-card:not(.hw-focus):hover {
+      transform: translateY(-4px) rotate(.4deg);
+      box-shadow: 9px 10px 0 rgba(0, 0, 0, .48);
+    }
+  }
+
+  /* Start button: color follows the selected level */
+  #btn-start-game {
+    transition: background-color .2s ease, color .2s ease, transform .1s ease, box-shadow .15s ease, filter .15s ease;
+    box-shadow: 0 4px 0 #090A0C, 0 10px 18px rgba(0, 0, 0, .45);
+  }
+  #btn-start-game:hover { filter: brightness(1.07); }
+  #btn-start-game:active { transform: translateY(3px); box-shadow: 0 1px 0 #090A0C; }
+  #btn-start-game.btn-easy { background: #2E8B57; color: #fff; }
+  #btn-start-game.btn-medium { background: #F5A623; color: #111317; }
+  #btn-start-game.btn-hard { background: #D04764; color: #fff; }
+  #btn-start-game.hw-focus { outline-offset: 3px; }
+
+  /* Card micro-animations: return stamp-in / launch */
+  @keyframes card-stamp-in {
+    0% { opacity: 0; transform: scale(1.09) rotate(-2deg); }
+    55% { opacity: 1; transform: scale(.985) rotate(.6deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0); }
+  }
+  @keyframes card-launch {
+    0% { opacity: 1; transform: translateY(-6px) scale(1); }
+    100% { opacity: 0; transform: translateY(-180%) scale(.9); }
+  }
+  .level-card.stamp-in { animation: card-stamp-in .55s cubic-bezier(.2, .9, .3, 1.25) both; }
+  .level-card.launching { animation: card-launch .24s ease-in forwards; }
+
+  /* === GRADE RATING (SSS ~ E) === */
+  .grade-zone { position: relative; display: flex; align-items: center; justify-content: center; z-index: 1; }
+  .grade-tier {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Barlow Condensed', 'Noto Sans SC', sans-serif;
+    font-size: clamp(58px, 11vw, 88px);
+    font-weight: 900; line-height: 1; letter-spacing: .02em;
+    white-space: nowrap;
+  }
+  .grade-letter { display: inline-block; will-change: transform, opacity, filter; }
+  .grade-sss { color: #F5A623; text-shadow: 0 0 22px rgba(245,166,35,.55), 0 3px 0 #8A5012; }
+  .grade-ss  { color: #F5A623; text-shadow: 0 0 12px rgba(245,166,35,.45), 0 2px 0 #8A5012; }
+  .grade-s   { color: #F7C948; text-shadow: 0 2px 0 #8A5012; }
+  .grade-a   { color: #4ADE80; text-shadow: 0 2px 0 #14532D; }
+  .grade-b   { color: #2E8B57; text-shadow: 0 2px 0 #0F3D26; }
+  .grade-c   { color: #C0A98A; text-shadow: 0 2px 0 #4B3D2A; }
+  .grade-d   { color: #9A938A; }
+  .grade-e   { color: #77726B; }
+
+  .grade-zone .grade-halo {
+    position: absolute; inset: -38px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,166,35,.45) 0%, rgba(245,166,35,.12) 45%, transparent 70%);
+    opacity: 0; pointer-events: none; z-index: 0;
+  }
+  .grade-zone .confetti {
+    position: absolute; left: 50%; top: 46%;
+    width: 7px; height: 11px; border-radius: 2px;
+    opacity: 0; pointer-events: none; z-index: 2;
+  }
+
+  /* NEW RECORD seal (stamped onto the settlement grade zone) */
+  #record-seal {
+    position: absolute; top: 2px; right: 2px;
+    background: #D04764; color: #fff;
+    font-size: 10px; font-weight: 900; letter-spacing: .1em;
+    padding: 3px 8px;
+    border: 1.5px solid #fff;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .45);
+    transform: rotate(10deg) scale(2.2);
+    opacity: 0; pointer-events: none;
+  }
+  #record-seal.record-show { animation: record-stamp-in .38s cubic-bezier(.2, 1.2, .3, 1) .55s both; }
+  @keyframes record-stamp-in {
+    0% { opacity: 0; transform: rotate(18deg) scale(2.2); }
+    55% { opacity: 1; transform: rotate(9deg) scale(.92); }
+    75% { transform: rotate(10deg) scale(1.06); }
+    100% { opacity: 1; transform: rotate(10deg) scale(1); }
+  }
+
+  .progress-grade {
+    font-family: 'Barlow Condensed', 'Noto Sans SC', sans-serif;
+    font-size: 22px; font-weight: 900; line-height: 1;
+    padding: 3px 7px; border: 1.5px solid rgba(255,255,255,.16);
+    border-radius: 6px; background: rgba(255,255,255,.06); white-space: nowrap;
+  }
+
+  @keyframes grade-pop {
+    0%   { opacity: 0; transform: scale(.2) rotate(-8deg); filter: blur(6px); }
+    60%  { opacity: 1; transform: scale(1.15) rotate(2deg); filter: blur(0); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg); filter: blur(0); }
+  }
+  @keyframes grade-pop-down {
+    0%   { opacity: 0; transform: translateY(-16px); filter: blur(4px); }
+    100% { opacity: 1; transform: translateY(8px); filter: blur(0); }
+  }
+  @keyframes grade-letter-pop {
+    0%   { opacity: 0; transform: scale(.15) translateY(-20px) rotate(-14deg); filter: blur(8px); }
+    60%  { opacity: 1; transform: scale(1.3) translateY(2px) rotate(3deg); filter: blur(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); filter: blur(0); }
+  }
+  @keyframes grade-halo {
+    0%   { opacity: .95; transform: scale(.35); }
+    100% { opacity: 0; transform: scale(2.4); }
+  }
+  @keyframes confetti-fly {
+    0%   { opacity: 1; transform: translate(-50%,-50%) rotate(0deg) scale(1); }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(.6); }
+  }
+
+  .grade-zone.grade-show.grade-s .grade-tier,
+  .grade-zone.grade-show.grade-a .grade-tier,
+  .grade-zone.grade-show.grade-b .grade-tier,
+  .grade-zone.grade-show.grade-c .grade-tier,
+  .grade-zone.grade-show.grade-d .grade-tier { animation: grade-pop .7s cubic-bezier(.2,1.4,.3,1) both; }
+  .grade-zone.grade-show.grade-e .grade-tier { animation: grade-pop-down .55s ease both; }
+  .grade-zone.grade-show.grade-sss .grade-letter,
+  .grade-zone.grade-show.grade-ss .grade-letter { opacity: 0; animation: grade-letter-pop .55s cubic-bezier(.2,1.6,.3,1) both; }
+  .grade-zone.grade-show.grade-sss .grade-letter:nth-child(2) { animation-delay: .09s; }
+  .grade-zone.grade-show.grade-sss .grade-letter:nth-child(3) { animation-delay: .18s; }
+  .grade-zone.grade-show.grade-ss .grade-letter:nth-child(2) { animation-delay: .09s; }
+  .grade-zone.grade-show.grade-sss .grade-halo { animation: grade-halo 1.15s ease-out .28s both; }
+  .grade-zone.grade-show.grade-sss .confetti { animation: confetti-fly 1.15s cubic-bezier(.15,.8,.3,1) both; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grade-zone.grade-show .grade-tier,
+    .grade-zone.grade-show .grade-letter { animation: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
+    .grade-zone.grade-show .grade-halo,
+    .grade-zone.grade-show .confetti { animation: none !important; opacity: 0 !important; }
+    .level-card { transition: none !important; }
+    .level-card.hw-focus { transform: none; }
+    .level-card.stamp-in,
+    .level-card.launching { animation: none !important; }
+    .flag-bounce, .flag-shake, .hud-score-pop { animation: none !important; }
+    .sparkle-dot, .ultra-flash { display: none !important; }
+    #btn-start-game { transition: none !important; }
+    #record-seal.record-show { animation: none !important; opacity: 1 !important; transform: rotate(10deg); }
+  }
+</style>
+</head>
+<body class="p-3 md:p-5 flex flex-col items-center">
+
+  <!-- Top Prototype Header -->
+  <header class="w-full max-w-5xl flex flex-wrap items-center justify-between gap-3 mb-3 pb-2 border-b border-gray-800">
+    <div>
+      <h1 class="text-xl md:text-2xl font-black tracking-tight text-white">《信号小旗》</h1>
+      <p class="text-xs text-gray-400"></p>
+    </div>
+  </header>
+
+  <!-- 手柄桥状态栏（Gamepad API） -->
+  <div id="gp-bar" class="w-full max-w-5xl mb-3 px-3 py-2 bg-[#181A1E] border border-gray-800 flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-2.5">
+      <span id="gp-dot" class="inline-block w-2.5 h-2.5 rounded-full" style="background:#6B7280;"></span>
+      <span class="text-xs font-black tracking-wide text-gray-300">手柄桥</span>
+      <span id="gp-text" class="text-xs font-mono-code text-gray-400">未检测到手柄 · 先按一下手柄任意键</span>
+    </div>
+    <div class="flex items-center gap-2 min-w-0">
+      <span id="gp-axes" class="text-xs font-mono-code text-emerald-400 truncate max-w-[190px]"></span>
+      <button id="gp-assign-btn" type="button" class="px-3 py-1.5 text-xs font-bold bg-[#2A2E35] text-gray-200 hover:bg-[#343941] whitespace-nowrap">重新绑定确认键</button>
+    </div>
+  </div>
+
+  <!-- MAIN GAME SCREEN (16:10 Stage) -->
+  <main id="game-stage" class="w-full max-w-5xl bg-[#181A1E] border-2 border-gray-700 relative overflow-hidden shadow-2xl" style="min-height: 440px;">
+    <!-- Subtle Edge Doodles (Visible in Medium & Hard modes) -->
+    <svg id="bg-doodles" class="absolute inset-0 w-full h-full pointer-events-none opacity-0 transition-opacity duration-300" viewBox="0 0 900 460" preserveAspectRatio="none">
+      <!-- Cactus silhouettes on far edges -->
+      <path d="M26,430 L26,350 M26,385 L10,385 L10,362 M26,375 L42,375 L42,355" stroke="#2D323B" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <path d="M874,430 L874,340 M874,378 L858,378 L858,354 M874,368 L890,368 L890,348" stroke="#2D323B" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <!-- Paper airplane doodle -->
+      <polygon points="70,75 105,65 82,88" fill="none" stroke="#374151" stroke-width="2"/>
+      <polygon points="815,82 848,70 826,95" fill="none" stroke="#374151" stroke-width="2"/>
+    </svg>
+
+    <!-- TOP HUD BAR -->
+    <div id="hud-bar" class="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center px-4 py-3 bg-[#111317]/90 border-b border-gray-800">
+      <div></div>
+
+      <div class="bg-[#D28B3F] text-[#111317] px-4 py-1 font-black text-sm tracking-wide flex items-center">
+        得分 <span id="hud-score" class="font-display text-2xl ml-1.5">0</span>
+      </div>
+
+      <div class="flex justify-end">
+        <div id="hud-timer-box" class="bg-white text-[#111317] border-2 border-[#111317] px-5 py-0.5 font-display font-extrabold text-3xl tracking-tight shadow">
+          01:00
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYING AREA: Left & Right Split Zones -->
+    <div id="play-area" class="relative z-10 grid grid-cols-2 min-h-[340px]">
+      <!-- Slanted Center Divider -->
+      <div class="hidden md:block absolute left-1/2 top-0 bottom-0 w-1.5 -translate-x-1/2 bg-gray-800 transform -skew-x-6 pointer-events-none"></div>
+
+      <!-- LEFT ZONE -->
+      <section id="zone-left" class="p-4 md:p-6 flex flex-col items-center justify-between transition-opacity duration-200">
+        <!-- Dossier Prompt Card -->
+        <div id="prompt-card-left" class="stamp-card w-full max-w-[330px] p-3 border-l-8 border-[#D28B3F] flex items-center justify-between gap-3">
+          <div class="flex flex-col items-center min-w-[82px]">
+            <div id="icon-wrap-left" class="w-14 h-14 flex items-center justify-center"></div>
+            <span id="rule-label-left" class="text-xs font-black tracking-wide mt-0.5 text-[#8A5012]">同向规则</span>
+          </div>
+          <div class="flex-1 flex items-center justify-center">
+            <div id="arrow-wrap-left" class="w-20 h-16 flex items-center justify-center"></div>
+          </div>
+          <div id="flash-mask-left" class="hidden absolute inset-0 bg-[#1F2329]/95 text-amber-400 flex items-center justify-center font-black text-lg tracking-wider">
+            记忆作答中
+          </div>
+        </div>
+
+<!-- Left Signal Flag (Sticker Outline) -->
+        <div class="relative flex flex-col items-center my-1">
+          <svg id="flag-svg-left" class="w-36 h-32 sticker-outline transition-all duration-150" viewBox="0 0 140 130">
+            <ellipse cx="70" cy="118" rx="34" ry="7" fill="#090A0C" opacity="0.75"/>
+            <line x1="70" y1="65" x2="70" y2="118" stroke="#374151" stroke-width="6" stroke-linecap="round"/>
+            <g id="flag-arm-left" transform="rotate(0, 70, 65)" style="transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);">
+              <line x1="70" y1="65" x2="70" y2="16" stroke="#D1D5DB" stroke-width="5" stroke-linecap="round"/>
+              <polygon points="73,16 112,28 73,42" fill="#F5A623" stroke="#111317" stroke-width="2"/>
+            </g>
+            <circle cx="70" cy="65" r="7" fill="#D28B3F" stroke="#111317" stroke-width="2"/>
+          </svg>
+          <span class="text-xs font-mono-code text-amber-400 font-semibold"></span>
+        </div>
+      </section>
+
+      <!-- RIGHT ZONE -->
+      <section id="zone-right" class="p-4 md:p-6 flex flex-col items-center justify-between transition-opacity duration-200">
+        <div id="prompt-card-right" class="stamp-card w-full max-w-[330px] p-3 border-l-8 border-[#62AAD2] flex items-center justify-between gap-3">
+          <div class="flex flex-col items-center min-w-[82px]">
+            <div id="icon-wrap-right" class="w-14 h-14 flex items-center justify-center"></div>
+            <span id="rule-label-right" class="text-xs font-black tracking-wide mt-0.5 text-[#1B5E85]">反向规则</span>
+          </div>
+          <div class="flex-1 flex items-center justify-center">
+            <div id="arrow-wrap-right" class="w-20 h-16 flex items-center justify-center"></div>
+          </div>
+          <div id="flash-mask-right" class="hidden absolute inset-0 bg-[#1F2329]/95 text-sky-400 flex items-center justify-center font-black text-lg tracking-wider">
+            记忆作答中
+          </div>
+        </div>
+
+        <div class="relative flex flex-col items-center my-1">
+          <svg id="flag-svg-right" class="w-36 h-32 sticker-outline transition-all duration-150" viewBox="0 0 140 130">
+            <ellipse cx="70" cy="118" rx="34" ry="7" fill="#090A0C" opacity="0.75"/>
+            <line x1="70" y1="65" x2="70" y2="118" stroke="#374151" stroke-width="6" stroke-linecap="round"/>
+            <g id="flag-arm-right" transform="rotate(0, 70, 65)" style="transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);">
+              <line x1="70" y1="65" x2="70" y2="16" stroke="#D1D5DB" stroke-width="5" stroke-linecap="round"/>
+              <polygon points="73,16 112,28 73,42" fill="#62AAD2" stroke="#111317" stroke-width="2"/>
+            </g>
+            <circle cx="70" cy="65" r="7" fill="#62AAD2" stroke="#111317" stroke-width="2"/>
+          </svg>
+          <span class="text-xs font-mono-code text-sky-400 font-semibold"></span>
+        </div>
+      </section>
+    </div>
+
+    <!-- BOTTOM PROGRESS BAR -->
+    <div class="relative z-10 px-4 py-2.5 bg-[#111317] border-t border-gray-800 flex items-center gap-4">
+      <span class="text-xs font-bold text-gray-400 whitespace-nowrap">时间进度</span>
+      <div class="flex-1 h-4 bg-gray-800 relative overflow-hidden border border-gray-700">
+        <div id="progress-fill" class="h-full bg-[#F5A623] transition-all duration-200" style="width: 0%;"></div>
+      </div>
+      <div id="progress-stars" class="flex items-center justify-end min-w-[64px]"></div>
+    </div>
+
+    <!-- OVERLAY: LEVEL SELECT -->
+    <div id="overlay-menu" class="absolute inset-0 z-30 bg-[#111317]/95 flex flex-col items-center justify-center p-6">
+      <div class="text-center mb-6">
+        <div class="inline-block bg-[#D28B3F] text-[#111317] text-xs font-black px-3 py-1 mb-2 tracking-[.2em]">MISSION SELECT</div>
+        <h2 class="text-3xl md:text-4xl font-black text-white">选择关卡</h2>
+        <p class="text-xs text-gray-500 font-mono-code mt-2 tracking-wide"></p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-3xl mb-6">
+        <div data-level="easy" class="level-card stamp-card p-4 border-t-8 border-[#2E8B57] cursor-pointer" role="button" tabindex="0">
+          <div class="mb-1">
+            <span class="text-xs font-mono-code text-gray-500">LEVEL 01</span>
+          </div>
+          <div class="text-xs font-black text-[#2E8B57] mb-1">新手引导</div>
+          <div class="text-xl font-black mb-1">简单 · 单旗练习</div>
+          <p class="text-xs text-gray-700 leading-relaxed"></p>
+        </div>
+        <div data-level="medium" class="level-card stamp-card p-4 border-t-8 border-[#F5A623] cursor-pointer" role="button" tabindex="0">
+          <div class="mb-1">
+            <span class="text-xs font-mono-code text-gray-500">LEVEL 02</span>
+          </div>
+          <div class="text-xs font-black text-[#8A5012] mb-1">进阶并行</div>
+          <div class="text-xl font-black mb-1">中等 · 双旗并行</div>
+          <p class="text-xs text-gray-700 leading-relaxed"></p>
+        </div>
+        <div data-level="hard" class="level-card stamp-card p-4 border-t-8 border-[#D04764] cursor-pointer" role="button" tabindex="0">
+          <div class="mb-1">
+            <span class="text-xs font-mono-code text-gray-500">LEVEL 03</span>
+          </div>
+          <div class="text-xs font-black text-[#991B38] mb-1">高阶挑战</div>
+          <div class="text-xl font-black mb-1">困难 · 高频闪变</div>
+          <p class="text-xs text-gray-700 leading-relaxed"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY: DURATION SELECT -->
+    <div id="overlay-duration" class="hidden absolute inset-0 z-30 bg-[#111317]/95 flex flex-col items-center justify-center p-6">
+      <div class="text-center mb-6">
+        <div class="inline-block bg-[#62AAD2] text-[#111317] text-xs font-black px-3 py-1 mb-2 tracking-[.2em]">TIME SELECT</div>
+        <h2 class="text-3xl md:text-4xl font-black text-white">选择时长</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-3xl">
+        <div data-duration="0" class="duration-card stamp-card p-4 border-t-8 border-[#2E8B57] cursor-pointer" role="button" tabindex="0">
+          <div class="text-xs font-black text-[#2E8B57] mb-1">快速体验</div>
+          <div class="text-3xl font-black mb-1">20<span class="text-base font-bold text-gray-500 ml-1">秒</span></div>
+        </div>
+        <div data-duration="1" class="duration-card stamp-card p-4 border-t-8 border-[#F5A623] cursor-pointer" role="button" tabindex="0">
+          <div class="text-xs font-black text-[#8A5012] mb-1">标准挑战</div>
+          <div class="text-3xl font-black mb-1">40<span class="text-base font-bold text-gray-500 ml-1">秒</span></div>
+        </div>
+        <div data-duration="2" class="duration-card stamp-card p-4 border-t-8 border-[#D04764] cursor-pointer" role="button" tabindex="0">
+          <div class="text-xs font-black text-[#991B38] mb-1">持久考验</div>
+          <div class="text-3xl font-black mb-1">60<span class="text-base font-bold text-gray-500 ml-1">秒</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY: 5-SECOND GUIDE -->
+    <div id="overlay-intro" class="hidden absolute inset-0 z-30 bg-[#111317]/95 flex flex-col items-center justify-center p-6">
+      <div class="stamp-card max-w-lg w-full p-6 border-l-8 border-[#F5A623] text-center">
+        <div class="text-xs font-black text-[#8A5012] mb-2"></div>
+        <h3 class="text-2xl font-black mb-4">准备好了吗？</h3>
+        <div class="grid grid-cols-2 gap-4 mb-5">
+          <div class="p-3 bg-amber-50 border border-amber-300 flex flex-col items-center">
+            <svg class="w-10 h-10 mb-1" viewBox="0 0 60 60">
+              <circle cx="30" cy="30" r="14" fill="#F5A623" stroke="#111317" stroke-width="2.5"/>
+              <line x1="30" y1="6" x2="30" y2="12" stroke="#F5A623" stroke-width="3.5"/>
+              <line x1="30" y1="48" x2="30" y2="54" stroke="#F5A623" stroke-width="3.5"/>
+              <line x1="6" y1="30" x2="12" y2="30" stroke="#F5A623" stroke-width="3.5"/>
+              <line x1="48" y1="30" x2="54" y2="30" stroke="#F5A623" stroke-width="3.5"/>
+            </svg>
+            <div class="font-black text-sm text-[#8A5012]">太阳 = 同向</div>
+            <div class="text-xs text-gray-600"></div>
+          </div>
+          <div class="p-3 bg-sky-50 border border-sky-300 flex flex-col items-center">
+            <svg class="w-10 h-10 mb-1" viewBox="0 0 60 60">
+              <path d="M36,14 A16,16 0 1,0 36,46 A12,12 0 1,1 36,14 Z" fill="#62AAD2" stroke="#111317" stroke-width="2"/>
+            </svg>
+            <div class="font-black text-sm text-[#1B5E85]">月亮 = 反向</div>
+            <div class="text-xs text-gray-600"></div>
+          </div>
+        </div>
+        <div class="font-display font-extrabold text-5xl text-[#D04764]" id="intro-countdown">5</div>
+      </div>
+    </div>
+
+    <!-- OVERLAY: PAUSE -->
+    <div id="overlay-pause" class="hidden absolute inset-0 z-30 bg-[#111317]/90 flex flex-col items-center justify-center p-6">
+      <div class="stamp-card max-w-sm w-full p-6 border-t-8 border-[#62AAD2] text-center">
+        <h3 class="text-2xl font-black mb-2">游戏已暂停</h3>
+        <p class="text-xs text-gray-600 mb-5"></p>
+        <div class="flex flex-col gap-3">
+          <button id="pause-resume" type="button" class="pause-opt py-2.5 bg-[#111317] text-white font-bold text-sm hw-focus">继续游戏</button>
+          <button id="pause-quit" type="button" class="pause-opt py-2.5 bg-gray-200 text-[#111317] font-bold text-sm">关卡选择</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY: SETTLEMENT -->
+    <div id="overlay-settlement" class="hidden absolute inset-0 z-30 bg-[#111317]/95 flex flex-col items-center justify-center p-6">
+      <div class="stamp-card max-w-md w-full p-6 border-l-8 border-[#F5A623]">
+        <div class="grade-zone mb-1" id="grade-zone">
+          <div class="grade-halo" aria-hidden="true"></div>
+          <div id="settle-grade" class="grade-tier" aria-live="polite"></div>
+          <div id="record-seal" aria-hidden="true"></div>
+        </div>
+        <div class="grid grid-cols-4 gap-3 bg-white p-3 border border-gray-300 mb-3 text-center">
+          <div>
+            <div class="text-xs text-gray-500">答对</div>
+            <div id="settle-score" class="font-display font-extrabold text-3xl text-[#2E8B57]">0</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">失误</div>
+            <div id="settle-errors" class="font-display font-extrabold text-3xl text-[#D04764]">0</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">平均反应</div>
+            <div id="settle-rt" class="font-display font-extrabold text-3xl text-[#111317]">0.0s</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">最大连击</div>
+            <div id="settle-combo" class="font-display font-extrabold text-3xl text-[#62AAD2]">0</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <button id="settle-retry" type="button" class="settle-opt py-2.5 bg-[#F5A623] text-[#111317] font-black text-sm hw-focus">重试本局</button>
+          <button id="settle-menu" type="button" class="settle-opt py-2.5 bg-[#111317] text-white font-black text-sm">关卡选择</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- HARDWARE LINKAGE CONSOLE (Demonstrates Physical Input -> Game State) -->
+  <section class="w-full max-w-5xl mt-4 bg-[#181A1E] border border-gray-800 p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <div class="text-xs font-black tracking-wide text-gray-300"></div>
+      <div id="hw-bus-log" class="text-xs font-mono-code text-amber-400"></div>
+    </div>
+
+    <!-- Signal Linkage SVG -->
+    <svg class="w-full h-7 mb-1" viewBox="0 0 800 28" preserveAspectRatio="none">
+      <line id="wire-l-stick" x1="120" y1="26" x2="120" y2="2" stroke="#374151" stroke-width="2" stroke-dasharray="4 3"/>
+      <line id="wire-l-btn" x1="260" y1="26" x2="260" y2="2" stroke="#374151" stroke-width="2" stroke-dasharray="4 3"/>
+      <line id="wire-r-stick" x1="540" y1="26" x2="540" y2="2" stroke="#374151" stroke-width="2" stroke-dasharray="4 3"/>
+      <line id="wire-r-btn" x1="680" y1="26" x2="680" y2="2" stroke="#374151" stroke-width="2" stroke-dasharray="4 3"/>
+    </svg>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+      <!-- LEFT HARDWARE UNIT -->
+      <div class="flex items-center justify-around bg-[#111317] p-4 border border-gray-800">
+        <div class="flex flex-col items-center">
+          <div id="stick-well-left" class="stick-well">
+            <div id="stick-knob-left" class="stick-knob bg-gradient-to-b from-amber-400 to-amber-600"></div>
+          </div>
+          <span class="text-xs font-bold text-amber-400 mt-2">左摇杆 [W A S D]</span>
+          <span id="state-l-stick" class="text-xs font-mono-code text-gray-400"></span>
+        </div>
+
+        <div class="flex flex-col items-center">
+          <button id="hw-btn-left" type="button" class="arcade-btn bg-[#F5A623] text-[#111317]">
+            <span class="text-sm font-black">左确认</span>
+            <span class="text-xs font-mono-code">[空格]</span>
+          </button>
+          <span id="state-l-btn" class="text-xs font-mono-code text-gray-400 mt-2"></span>
+        </div>
+      </div>
+
+      <!-- RIGHT HARDWARE UNIT -->
+      <div class="flex items-center justify-around bg-[#111317] p-4 border border-gray-800">
+        <div class="flex flex-col items-center">
+          <div id="stick-well-right" class="stick-well">
+            <div id="stick-knob-right" class="stick-knob bg-gradient-to-b from-sky-400 to-sky-600"></div>
+          </div>
+          <span class="text-xs font-bold text-sky-400 mt-2">右摇杆 [上下左右]</span>
+          <span id="state-r-stick" class="text-xs font-mono-code text-gray-400"></span>
+        </div>
+
+        <div class="flex flex-col items-center">
+          <button id="hw-btn-right" type="button" class="arcade-btn bg-[#62AAD2] text-[#111317]">
+            <span class="text-sm font-black">右确认</span>
+            <span class="text-xs font-mono-code">[回车]</span>
+          </button>
+          <span id="state-r-btn" class="text-xs font-mono-code text-gray-400 mt-2"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+(() => {
+  // === AUDIO SYNTHESIS (Web Audio API, no external files) ===
+  let audioCtx = null;
+  let soundEnabled = true;
+
+  function ensureCtx() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+  }
+
+  function ensureAudio() {
+    if (!soundEnabled) return null;
+    return ensureCtx();
+  }
+
+  function playTone(freq, duration, type = 'sine', gainVal = 0.12) {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  }
+
+  const sfx = {
+    click: () => playTone(420, 0.04, 'triangle', 0.06),
+    menuMove: (key) => {
+      if (key === 'easy') {
+        playTone(659.25, 0.05, 'triangle', 0.07);
+      } else if (key === 'medium') {
+        playTone(523.25, 0.05, 'triangle', 0.07);
+        setTimeout(() => playTone(659.25, 0.06, 'triangle', 0.07), 55);
+      } else {
+        playTone(392, 0.09, 'sawtooth', 0.05);
+        setTimeout(() => playTone(196, 0.12, 'sawtooth', 0.05), 70);
+      }
+    },
+    unlock: () => {
+      playTone(783.99, 0.09, 'triangle', 0.12);
+      setTimeout(() => playTone(1046.50, 0.09, 'triangle', 0.12), 100);
+      setTimeout(() => playTone(1318.51, 0.16, 'sine', 0.12), 200);
+    },
+    record: () => {
+      playTone(90, 0.08, 'sine', 0.18); // 盖戳重音
+      [783.99, 880.00, 1046.50, 1319.51].forEach((f, i) => {
+        setTimeout(() => playTone(f, 0.09, 'triangle', 0.1), 110 + i * 90);
+      });
+    },
+    correct: (rtMs = 1000) => {
+      const f = rtMs < 500 ? 1.42 : rtMs < 800 ? 1.28 : rtMs < 1300 ? 1.12 : rtMs < 1800 ? 1 : 0.88;
+      playTone(587 * f, 0.09, 'sine', 0.14);
+      setTimeout(() => playTone(880 * f, 0.15, 'sine', 0.14), 70);
+    },
+    wrong: () => {
+      // 温暖的两音下行，像在说“再试一次”，而不是“你错了”
+      playTone(392, 0.10, 'triangle', 0.08);
+      setTimeout(() => playTone(330, 0.18, 'triangle', 0.08), 100);
+    },
+    combo: (n) => {
+      const base = 620 * Math.pow(1.07, Math.min(n, 12));
+      playTone(base, 0.05, 'sine', 0.07);
+      setTimeout(() => playTone(base * 1.26, 0.05, 'sine', 0.07), 55);
+      setTimeout(() => playTone(base * 1.5, 0.1, 'sine', 0.07), 110);
+    },
+    finalShimmer: () => {
+      playTone(1318.51, 0.05, 'sine', 0.05);
+      setTimeout(() => playTone(1760, 0.09, 'sine', 0.05), 60);
+    },
+    tick: () => playTone(980, 0.035, 'square', 0.04),
+    grade: (g) => playGradeJingle(g)
+  };
+
+  // === GRADE CONFIG (rating thresholds + jingles, playtest-tunable) ===
+  const GRADE_TIERS = [
+    { grade: 'SSS', ratio: 2.00 },
+    { grade: 'SS', ratio: 1.70 },
+    { grade: 'S', ratio: 1.40 },
+    { grade: 'A', ratio: 1.10 },
+    { grade: 'B', ratio: 1.00 },
+    { grade: 'C', ratio: 0.70 },
+    { grade: 'D', ratio: 0.40 },
+    { grade: 'E', ratio: 0 }
+  ];
+  const GRADE_MISTAKE_DROP = [
+    { max: 3, drop: 0 },
+    { max: 6, drop: 1 },
+    { max: 10, drop: 2 },
+    { max: Infinity, drop: 3 }
+  ];
+  // [freq Hz, duration s, waveform, gain, delay ms]
+  const GRADE_JINGLES = {
+    SSS: [
+      [523.25, .10, 'triangle', .14, 0],
+      [659.25, .10, 'triangle', .14, 70],
+      [783.99, .10, 'triangle', .14, 140],
+      [1046.50, .22, 'sine', .16, 210],
+      [1567.98, .10, 'sine', .08, 380],
+      [1567.98, .10, 'sine', .08, 500],
+      [2093.00, .07, 'sine', .06, 620]
+    ],
+    SS: [
+      [523.25, .10, 'triangle', .12, 0],
+      [659.25, .10, 'triangle', .12, 80],
+      [783.99, .10, 'triangle', .12, 160],
+      [1046.50, .18, 'sine', .12, 260]
+    ],
+    S: [
+      [659.25, .10, 'triangle', .11, 0],
+      [783.99, .10, 'triangle', .11, 90],
+      [1046.50, .14, 'sine', .11, 180]
+    ],
+    A: [
+      [523.25, .09, 'triangle', .10, 0],
+      [783.99, .09, 'triangle', .10, 90],
+      [1046.50, .12, 'sine', .09, 180]
+    ],
+    B: [
+      [440.00, .14, 'triangle', .09, 0],
+      [523.25, .14, 'sine', .09, 120]
+    ],
+    C: [
+      [523.25, .14, 'sine', .08, 0],
+      [440.00, .14, 'sine', .08, 110],
+      [392.00, .16, 'sine', .08, 220]
+    ],
+    D: [
+      [329.63, .16, 'triangle', .07, 0],
+      [261.63, .16, 'triangle', .07, 130],
+      [196.00, .20, 'triangle', .07, 260]
+    ],
+    E: [
+      [220.00, .22, 'sine', .05, 0],
+      [174.61, .28, 'sine', .045, 200]
+    ]
+  };
+  function playGradeJingle(grade) {
+    const seq = GRADE_JINGLES[grade];
+    if (!seq) return;
+    seq.forEach(([freq, dur, type, gain, delay]) => {
+      setTimeout(() => playTone(freq, dur, type, gain), delay);
+    });
+  }
+
+  // === BACKGROUND MUSIC: 程序化轻音乐循环 (C - Am - F - G, 100 BPM) ===
+  // 音乐/音效开关由整机统一管理，游戏内固定开启、不提供 UI 开关
+
+  const BGM_BPM = 100;
+  const BGM_STEP_DUR = 60 / BGM_BPM / 2; // 8 分音符
+  const BGM_BARS = 8;
+  const BGM_LENGTH = BGM_BARS * 8;
+  // 主旋律：MIDI 音高，每 8 分音符一音（分解和弦 + 轻微波浪）
+  const BGM_MEL = [
+    // C
+    64, 67, 72, 67, 72, 67, 64, 67,
+    // Am
+    60, 64, 69, 64, 60, 69, 72, 69,
+    // F
+    57, 60, 65, 60, 65, 60, 57, 53,
+    // G
+    59, 62, 67, 62, 67, 62, 59, 55,
+    // C
+    64, 67, 72, 67, 76, 72, 67, 64,
+    // Am
+    64, 69, 72, 76, 72, 69, 64, 69,
+    // F
+    60, 65, 69, 65, 69, 65, 60, 65,
+    // G
+    59, 62, 67, 62, 71, 67, 62, 67
+  ];
+  const BGM_BASS_ROOT = [48, 45, 41, 43, 48, 45, 41, 43]; // 每小节根音（C3 A2 F2 G2）
+  const BGM_PAD = [
+    [60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62],
+    [60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]
+  ];
+  const bgm = { started: false, step: 0, nextTime: 0, timer: null, bus: null, bassBus: null, noiseBuf: null, lookahead: 0.12 };
+
+  const midiToFreq = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+  function bgmPluck(midi, t, vol, type, dur, attack = 0.008, dest = null) {
+    const ctx = audioCtx;
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.value = midiToFreq(midi);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g);
+    g.connect(dest || bgm.bus);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  }
+
+  function bgmHat(t) {
+    const ctx = audioCtx;
+    if (!bgm.noiseBuf) {
+      const len = Math.floor(ctx.sampleRate * 0.1);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      bgm.noiseBuf = buf;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = bgm.noiseBuf;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 7500;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.022, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+    src.connect(hp);
+    hp.connect(g);
+    g.connect(bgm.bus);
+    src.start(t);
+    src.stop(t + 0.04);
+  }
+
+  function bgmKick(t) {
+    const ctx = audioCtx;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(130, t);
+    osc.frequency.exponentialRampToValueAtTime(42, t + 0.1);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.17, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    osc.connect(g);
+    g.connect(bgm.bassBus || bgm.bus);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  }
+
+  function bgmPlayStep(step, t) {
+    const bar = Math.floor(step / 8);
+    const s = step % 8;
+    const mel = BGM_MEL[step];
+    if (mel != null) bgmPluck(mel, t, 0.09, 'triangle', 0.24);
+    if (s === 0 || s === 2 || s === 4 || s === 6) {
+      const root = BGM_BASS_ROOT[bar];
+      bgmPluck(s === 6 ? root + 7 : root, t, 0.1, 'sine', 0.3, 0.01, bgm.bassBus);
+    }
+    if (s === 0) {
+      BGM_PAD[bar].forEach((m) => bgmPluck(m, t, 0.025, 'sine', BGM_STEP_DUR * 7.6, 0.3));
+    }
+    if (s % 2 === 1) bgmHat(t);
+    if (s === 0 || s === 4) bgmKick(t);
+  }
+
+  function bgmSchedule() {
+    if (!audioCtx || !bgm.bus) return;
+    while (bgm.nextTime < audioCtx.currentTime + bgm.lookahead) {
+      bgmPlayStep(bgm.step, bgm.nextTime);
+      bgm.nextTime += BGM_STEP_DUR;
+      bgm.step = (bgm.step + 1) % BGM_LENGTH;
+    }
+  }
+
+  // 不同界面的 BGM 音量：暂停/结算压低，突出 UI 音效
+  function bgmTargetGain() {
+    if (state.screen === 'PAUSED') return 0.25;
+    if (state.screen === 'SETTLEMENT') return 0.45;
+    return 1.0;
+  }
+
+  function bgmSetLevel() {
+    if (!bgm.bus || !audioCtx) return;
+    const target = bgmTargetGain();
+    bgm.bus.gain.cancelScheduledValues(audioCtx.currentTime);
+    bgm.bus.gain.setTargetAtTime(target, audioCtx.currentTime, 0.3);
+  }
+
+  // 最后 10 秒冲刺：轻轻撤掉低音（bass + kick），只留旋律，紧张感自然浮现
+  let finaleMode = false;
+
+  function bgmSetFinale(on) {
+    finaleMode = on;
+    if (!bgm.bassBus || !audioCtx) return;
+    bgm.bassBus.gain.cancelScheduledValues(audioCtx.currentTime);
+    bgm.bassBus.gain.setTargetAtTime(on ? 0.15 : 1.0, audioCtx.currentTime, 0.35);
+  }
+
+  function bgmStart() {
+    if (bgm.started) { bgmSetLevel(); return; }
+    const ctx = ensureCtx();
+    if (!ctx) return;
+    if (!bgm.bus) {
+      bgm.bus = ctx.createGain();
+      bgm.bus.gain.value = 0;
+      bgm.bus.connect(ctx.destination);
+    }
+    if (!bgm.bassBus) {
+      bgm.bassBus = ctx.createGain();
+      bgm.bassBus.gain.value = finaleMode ? 0.15 : 1.0;
+      bgm.bassBus.connect(bgm.bus);
+    }
+    bgm.started = true;
+    bgm.step = 0;
+    bgm.nextTime = ctx.currentTime + 0.12;
+    bgmSetLevel();
+    bgm.timer = setInterval(bgmSchedule, 30);
+  }
+
+  // === LEVEL META & LOCAL PROGRESS (best grade + unlock) ===
+  const STORAGE_KEY = 'code-artifact-progress-v1';
+  const LEVEL_KEYS = ['easy', 'medium', 'hard'];
+  const GRADE_ORDER = ['SSS', 'SS', 'S', 'A', 'B', 'C', 'D', 'E'];
+  const LEVEL_ORDER_IDX = { easy: 0, medium: 1, hard: 2 };
+  const START_BTN_LABEL = {
+    easy: '开始挑战 · 简单',
+    medium: '开始挑战 · 中等',
+    hard: '开始挑战 · 困难'
+  };
+  let pendingStamp = false;
+
+  let progress = loadProgress();
+
+  function loadProgress() {
+    const empty = {
+      best: { easy: null, medium: null, hard: null },
+      records: { easy: null, medium: null, hard: null }
+    };
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p && typeof p === 'object') {
+          LEVEL_KEYS.forEach(k => {
+            const rec = p.records && p.records[k];
+            if (rec && typeof rec === 'object' && rec.grade) {
+              empty.records[k] = {
+                grade: rec.grade,
+                score: rec.score != null ? rec.score : null,
+                errors: rec.errors != null ? rec.errors : null,
+                avgRt: rec.avgRt != null ? rec.avgRt : null,
+                ts: rec.ts || null
+              };
+              empty.best[k] = rec.grade;
+            } else if (p.best && p.best[k]) {
+              // 旧存档迁移：只有等级，细节记为 null
+              empty.records[k] = { grade: p.best[k], score: null, errors: null, avgRt: null, ts: null };
+              empty.best[k] = p.best[k];
+            }
+          });
+        }
+      }
+    } catch (e) { /* storage unavailable */ }
+    return empty;
+  }
+
+  function saveProgress() {
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch (e) { /* noop */ }
+  }
+
+  function gradeRank(g) { return GRADE_ORDER.indexOf(g); }
+
+  // 新纪录判定：首通 > 等级突破 > 同档得分 > 同分少失误 > 同分同失误快反应
+  function isNewRecord(key, grade, score, errors, avgRtSec) {
+    const rec = progress.records[key];
+    if (!rec) return { isNew: true, kind: 'first' };
+    const gNew = gradeRank(grade), gOld = gradeRank(rec.grade);
+    if (gNew < gOld) return { isNew: true, kind: 'grade' };
+    if (gNew > gOld) return { isNew: false };
+    if (rec.score != null && score > rec.score) return { isNew: true, kind: 'score' };
+    if (rec.errors != null && errors < rec.errors) return { isNew: true, kind: 'errors' };
+    if (rec.avgRt != null && avgRtSec < rec.avgRt) return { isNew: true, kind: 'rt' };
+    return { isNew: false };
+  }
+
+  // === GAME CONFIG & STATE ===
+  const LEVELS = {
+    easy: { name: '简单 · 单旗练习', gradeBase: 8, dual: false, flashHide: false, doodles: false },
+    medium: { name: '中等 · 双旗并行', gradeBase: 10, dual: true, flashHide: false, doodles: true },
+    hard: { name: '困难 · 高频闪变', gradeBase: 12, dual: true, flashHide: true, doodles: true }
+  };
+  const DURATIONS = [20, 40, 60]; // 可选时长（秒）
+
+  const DIRS = ['up', 'right', 'down', 'left'];
+  const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  const ROTATION = { up: 0, right: 90, down: 180, left: -90 };
+
+  const state = {
+    screen: 'LEVEL_SELECT', // LEVEL_SELECT | DURATION_SELECT | INTRO_5S | PLAYING | PAUSED | SETTLEMENT
+    levelKey: 'easy',
+    menuIdx: 0,
+    menuZone: 'cards',
+    durationIdx: 2,
+    duration: 60,
+    launching: false,
+    pauseIdx: 0,
+    settleIdx: 0,
+    timeLeft: 60,
+    score: 0,
+    errors: 0,
+    combo: 0,
+    maxCombo: 0,
+    reactionTimes: [],
+    timerId: null,
+    introTimerId: null,
+    flashTimers: { left: null, right: null },
+    left: { active: true, rule: 'sun', arrow: 'right', flagDir: 'up', shownAt: 0 },
+    right: { active: false, rule: 'moon', arrow: 'left', flagDir: 'up', shownAt: 0 }
+  };
+
+  // === DOM ELEMENTS ===
+  const el = {
+    overlayMenu: document.getElementById('overlay-menu'),
+    overlayDuration: document.getElementById('overlay-duration'),
+    overlayIntro: document.getElementById('overlay-intro'),
+    overlayPause: document.getElementById('overlay-pause'),
+    overlaySettle: document.getElementById('overlay-settlement'),
+    bgDoodles: document.getElementById('bg-doodles'),
+    hudScore: document.getElementById('hud-score'),
+    hudTimer: document.getElementById('hud-timer-box'),
+    progressFill: document.getElementById('progress-fill'),
+    progressStars: document.getElementById('progress-stars'),
+    zoneLeft: document.getElementById('zone-left'),
+    zoneRight: document.getElementById('zone-right'),
+    iconLeft: document.getElementById('icon-wrap-left'),
+    iconRight: document.getElementById('icon-wrap-right'),
+    ruleLeft: document.getElementById('rule-label-left'),
+    ruleRight: document.getElementById('rule-label-right'),
+    arrowLeft: document.getElementById('arrow-wrap-left'),
+    arrowRight: document.getElementById('arrow-wrap-right'),
+    flashMaskLeft: document.getElementById('flash-mask-left'),
+    flashMaskRight: document.getElementById('flash-mask-right'),
+    flagSvgLeft: document.getElementById('flag-svg-left'),
+    flagSvgRight: document.getElementById('flag-svg-right'),
+    flagArmLeft: document.getElementById('flag-arm-left'),
+    flagArmRight: document.getElementById('flag-arm-right'),
+    hwBusLog: document.getElementById('hw-bus-log'),
+    stickKnobLeft: document.getElementById('stick-knob-left'),
+    stickKnobRight: document.getElementById('stick-knob-right'),
+    stateLStick: document.getElementById('state-l-stick'),
+    stateRStick: document.getElementById('state-r-stick'),
+    stateLBtn: document.getElementById('state-l-btn'),
+    stateRBtn: document.getElementById('state-r-btn'),
+    wireLStick: document.getElementById('wire-l-stick'),
+    wireLBtn: document.getElementById('wire-l-btn'),
+    wireRStick: document.getElementById('wire-r-stick'),
+    wireRBtn: document.getElementById('wire-r-btn'),
+    hwBtnLeft: document.getElementById('hw-btn-left'),
+    hwBtnRight: document.getElementById('hw-btn-right'),
+    introCountdown: document.getElementById('intro-countdown')
+  };
+
+  // === SVG GENERATORS (Zero Emoji) ===
+  function svgSun() {
+    return `<svg viewBox="0 0 60 60" class="w-12 h-12">
+      <circle cx="30" cy="30" r="14" fill="#F5A623" stroke="#111317" stroke-width="2.5"/>
+      <line x1="30" y1="5" x2="30" y2="12" stroke="#F5A623" stroke-width="4" stroke-linecap="round"/>
+      <line x1="30" y1="48" x2="30" y2="55" stroke="#F5A623" stroke-width="4" stroke-linecap="round"/>
+      <line x1="5" y1="30" x2="12" y2="30" stroke="#F5A623" stroke-width="4" stroke-linecap="round"/>
+      <line x1="48" y1="30" x2="55" y2="30" stroke="#F5A623" stroke-width="4" stroke-linecap="round"/>
+      <line x1="12" y1="12" x2="17" y2="17" stroke="#F5A623" stroke-width="3.5" stroke-linecap="round"/>
+      <line x1="43" y1="43" x2="48" y2="48" stroke="#F5A623" stroke-width="3.5" stroke-linecap="round"/>
+      <line x1="48" y1="12" x2="43" y2="17" stroke="#F5A623" stroke-width="3.5" stroke-linecap="round"/>
+      <line x1="17" y1="43" x2="12" y2="48" stroke="#F5A623" stroke-width="3.5" stroke-linecap="round"/>
+    </svg>`;
+  }
+
+  function svgMoon() {
+    return `<svg viewBox="0 0 60 60" class="w-12 h-12">
+      <path d="M36,12 A18,18 0 1,0 36,48 A13.5,13.5 0 1,1 36,12 Z" fill="#62AAD2" stroke="#111317" stroke-width="2.5"/>
+    </svg>`;
+  }
+
+  function svgArrow(dir) {
+    const rot = ROTATION[dir] - 90; // base points right
+    return `<svg viewBox="0 0 70 70" class="w-16 h-16" style="transform: rotate(${rot}deg);">
+      <line x1="10" y1="35" x2="46" y2="35" stroke="#111317" stroke-width="9" stroke-linecap="round"/>
+      <polygon points="42,18 62,35 42,52" fill="#111317"/>
+    </svg>`;
+  }
+
+  // === RENDERING & UI UPDATES ===
+  function showScreen(screenName) {
+    state.screen = screenName;
+    if (screenName !== 'PLAYING') bgmSetFinale(false);
+    bgmSetLevel(); // BGM 随界面自动 duck：暂停/结算压低，突出状态音效
+    el.overlayMenu.classList.toggle('hidden', screenName !== 'LEVEL_SELECT');
+    el.overlayDuration.classList.toggle('hidden', screenName !== 'DURATION_SELECT');
+    el.overlayIntro.classList.toggle('hidden', screenName !== 'INTRO_5S');
+    el.overlayPause.classList.toggle('hidden', screenName !== 'PAUSED');
+    el.overlaySettle.classList.toggle('hidden', screenName !== 'SETTLEMENT');
+    if (screenName === 'LEVEL_SELECT') {
+      state.menuIdx = LEVEL_ORDER_IDX[state.levelKey];
+      state.menuZone = 'cards';
+      updateStartButton();
+      updateMenuFocus();
+      if (pendingStamp) {
+        pendingStamp = false;
+        const card = document.querySelectorAll('.level-card')[LEVEL_ORDER_IDX[state.levelKey]];
+        if (card) {
+          card.classList.add('stamp-in');
+          setTimeout(() => card.classList.remove('stamp-in'), 700);
+        }
+      }
+      return;
+    }
+    if (screenName === 'DURATION_SELECT') {
+      state.menuZone = 'cards';
+      updateMenuFocus();
+      return;
+    }
+    updateMenuFocus();
+  }
+
+  function updateMenuFocus() {
+    document.querySelectorAll('.level-card').forEach((card, i) => {
+      card.classList.toggle('hw-focus', state.screen === 'LEVEL_SELECT' && state.menuZone === 'cards' && i === state.menuIdx);
+    });
+    document.querySelectorAll('.duration-card').forEach((card, i) => {
+      card.classList.toggle('hw-focus', state.screen === 'DURATION_SELECT' && i === state.durationIdx);
+    });
+    const startBtn = document.getElementById('btn-start-game');
+    if (startBtn) startBtn.classList.toggle('hw-focus', state.screen === 'LEVEL_SELECT' && state.menuZone === 'start');
+    document.querySelectorAll('.pause-opt').forEach((btn, i) => {
+      btn.classList.toggle('hw-focus', state.screen === 'PAUSED' && i === state.pauseIdx);
+    });
+    document.querySelectorAll('.settle-opt').forEach((btn, i) => {
+      btn.classList.toggle('hw-focus', state.screen === 'SETTLEMENT' && i === state.settleIdx);
+    });
+    updateStartButton();
+  }
+
+  function updateStartButton() {
+    const btn = document.getElementById('btn-start-game');
+    if (!btn) return;
+    const key = LEVEL_KEYS[state.menuIdx];
+    btn.textContent = START_BTN_LABEL[key];
+    btn.classList.remove('btn-easy', 'btn-medium', 'btn-hard');
+    btn.classList.add('btn-' + key);
+  }
+
+  function launchLevel(levelKey, durSec) {
+    state.levelKey = levelKey;
+    state.duration = durSec;
+    if (state.launching) return;
+    state.launching = true;
+    setTimeout(() => { state.launching = false; }, 450);
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      startLevel(levelKey, durSec);
+      return;
+    }
+    const card = document.querySelectorAll('.level-card')[LEVEL_ORDER_IDX[levelKey]];
+    if (card) {
+      card.classList.add('launching');
+      setTimeout(() => card.classList.remove('launching'), 280);
+    }
+    setTimeout(() => startLevel(levelKey, durSec), 250);
+  }
+
+  function renderSide(side) {
+    const s = state[side];
+    const zone = side === 'left' ? el.zoneLeft : el.zoneRight;
+    const iconWrap = side === 'left' ? el.iconLeft : el.iconRight;
+    const ruleLabel = side === 'left' ? el.ruleLeft : el.ruleRight;
+    const arrowWrap = side === 'left' ? el.arrowLeft : el.arrowRight;
+    const flagArm = side === 'left' ? el.flagArmLeft : el.flagArmRight;
+
+    zone.style.opacity = s.active ? '1' : '0.25';
+    iconWrap.innerHTML = s.rule === 'sun' ? svgSun() : svgMoon();
+    ruleLabel.textContent = s.rule === 'sun' ? '同向规则' : '反向规则';
+    ruleLabel.style.color = s.rule === 'sun' ? '#8A5012' : '#1B5E85';
+    arrowWrap.innerHTML = svgArrow(s.arrow);
+    flagArm.setAttribute('transform', `rotate(${ROTATION[s.flagDir]}, 70, 65)`);
+  }
+
+  function renderHUD() {
+    const cfg = LEVELS[state.levelKey];
+    el.hudScore.textContent = state.score;
+    el.bgDoodles.style.opacity = cfg.doodles ? '0.9' : '0';
+
+    const sec = Math.max(0, state.timeLeft);
+    const mm = Math.floor(sec / 60), ss = sec % 60;
+    el.hudTimer.textContent = `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+    el.hudTimer.classList.toggle('timer-urgent', sec <= 10 && sec > 0);
+
+    const pct = state.duration > 0
+      ? Math.min(100, Math.round(((state.duration - state.timeLeft) / state.duration) * 100))
+      : 0;
+    el.progressFill.style.width = `${pct}%`;
+
+    const elapsed = state.duration - state.timeLeft;
+    if (state.screen === 'PLAYING' && elapsed >= 5) {
+      const liveGrade = computeGrade(true);
+      el.progressStars.innerHTML = `<span class="progress-grade grade-${liveGrade.toLowerCase()}">${liveGrade}</span>`;
+    } else {
+      el.progressStars.innerHTML = '';
+    }
+  }
+
+  // 效率评级：每分钟答对题数 ÷ 难度基准 → 等级；失误过多降级
+  function computeGrade(live = false) {
+    const base = LEVELS[state.levelKey].gradeBase;
+    let elapsedSec = state.duration - state.timeLeft;
+    if (live) elapsedSec = Math.max(elapsedSec, 5);
+    if (elapsedSec <= 0 || base <= 0) return 'E';
+    const effPerMin = state.score / (elapsedSec / 60);
+    const ratio = effPerMin / base;
+    let idx = GRADE_TIERS.length - 1;
+    for (let i = 0; i < GRADE_TIERS.length; i++) {
+      if (ratio >= GRADE_TIERS[i].ratio) { idx = i; break; }
+    }
+    const dropRule = GRADE_MISTAKE_DROP.find(r => state.errors <= r.max);
+    idx = Math.min(GRADE_TIERS.length - 1, idx + (dropRule ? dropRule.drop : 0));
+    return GRADE_TIERS[idx].grade;
+  }
+
+  function randomItem(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function refreshQuestion(side) {
+    const cfg = LEVELS[state.levelKey];
+    const s = state[side];
+    s.rule = Math.random() < 0.5 ? 'sun' : 'moon';
+    s.arrow = randomItem(DIRS);
+    s.shownAt = performance.now();
+
+    const mask = side === 'left' ? el.flashMaskLeft : el.flashMaskRight;
+    mask.classList.add('hidden');
+    if (state.flashTimers[side]) clearTimeout(state.flashTimers[side]);
+
+    if (cfg.flashHide && Math.random() < 0.45) {
+      state.flashTimers[side] = setTimeout(() => {
+        if (state.screen === 'PLAYING' && state[side].active) {
+          mask.classList.remove('hidden');
+        }
+      }, 800);
+    }
+    renderSide(side);
+  }
+
+  function startLevel(levelKey, durationSec) {
+    state.levelKey = levelKey;
+    state.duration = durationSec;
+    const cfg = LEVELS[levelKey];
+    state.timeLeft = durationSec;
+    state.score = 0;
+    state.errors = 0;
+    state.combo = 0;
+    state.maxCombo = 0;
+    state.reactionTimes = [];
+    bgmSetFinale(false);
+
+    if (cfg.dual) {
+      state.left.active = true;
+      state.right.active = true;
+    } else {
+      const startLeft = Math.random() < 0.5;
+      state.left.active = startLeft;
+      state.right.active = !startLeft;
+    }
+
+    refreshQuestion('left');
+    refreshQuestion('right');
+    renderHUD();
+
+    // 5s Intro Guide
+    showScreen('INTRO_5S');
+    let introSec = 5;
+    el.introCountdown.textContent = introSec;
+    if (state.introTimerId) clearInterval(state.introTimerId);
+    state.introTimerId = setInterval(() => {
+      introSec -= 1;
+      if (introSec <= 0) {
+        clearInterval(state.introTimerId);
+        beginPlaying();
+      } else {
+        el.introCountdown.textContent = introSec;
+        sfx.tick();
+      }
+    }, 1000);
+  }
+
+  function beginPlaying() {
+    showScreen('PLAYING');
+    state.left.shownAt = performance.now();
+    state.right.shownAt = performance.now();
+    if (state.timerId) clearInterval(state.timerId);
+    state.timerId = setInterval(() => {
+      if (state.screen !== 'PLAYING') return;
+      state.timeLeft -= 1;
+      const finale = state.timeLeft <= 10 && state.timeLeft > 0;
+      if (finale !== finaleMode) bgmSetFinale(finale); // 最后 10 秒撤掉低音
+      if (finale) sfx.tick();
+      renderHUD();
+      if (state.timeLeft <= 0) {
+        finishGame();
+      }
+    }, 1000);
+  }
+
+  function spawnGradeConfetti(zone, count = 10) {
+    const colors = ['#F5A623', '#FFFFFF', '#62AAD2', '#D04764', '#F7C948'];
+    for (let i = 0; i < count; i++) {
+      const c = document.createElement('span');
+      c.className = 'confetti';
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.6;
+      const dist = 44 + Math.random() * 36;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - 26;
+      c.style.setProperty('--dx', dx.toFixed(1) + 'px');
+      c.style.setProperty('--dy', dy.toFixed(1) + 'px');
+      c.style.setProperty('--rot', Math.round(Math.random() * 480 - 240) + 'deg');
+      c.style.background = colors[i % colors.length];
+      c.style.animationDelay = (0.20 + Math.random() * 0.2).toFixed(2) + 's';
+      zone.appendChild(c);
+      setTimeout(() => c.remove(), 1700);
+    }
+  }
+
+  // 连击粒子：稀疏小圆点/小星花，从答对的那面小旗旁散出
+  function spawnComboSparkle(side, tier) {
+    const flagSvg = side === 'left' ? el.flagSvgLeft : el.flagSvgRight;
+    const wrap = flagSvg ? flagSvg.parentElement : null;
+    if (!wrap) return;
+    const n = [0, 3, 6, 9][tier] || 3;
+    for (let i = 0; i < n; i++) {
+      const star = tier >= 2 && i % 3 === 0;
+      const dot = document.createElement('span');
+      dot.className = star ? 'sparkle-dot sparkle-star' : 'sparkle-dot';
+      const ang = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+      const dist = 26 + Math.random() * (tier >= 2 ? 22 : 12);
+      dot.style.setProperty('--sx', (Math.cos(ang) * dist).toFixed(0) + 'px');
+      dot.style.setProperty('--sy', (Math.sin(ang) * dist - 12).toFixed(0) + 'px');
+      dot.style.left = '50%';
+      dot.style.top = '30%';
+      dot.style.background = star ? '#FFFFFF' : (tier >= 3 ? '#FDE68A' : '#F5A623');
+      wrap.appendChild(dot);
+      setTimeout(() => dot.remove(), 800);
+    }
+  }
+
+  // 超神速度（<500ms）小闪光
+  function spawnUltraFlash(side) {
+    const flagSvg = side === 'left' ? el.flagSvgLeft : el.flagSvgRight;
+    const wrap = flagSvg ? flagSvg.parentElement : null;
+    if (!wrap) return;
+    const f = document.createElement('span');
+    f.className = 'ultra-flash';
+    wrap.appendChild(f);
+    setTimeout(() => f.remove(), 500);
+  }
+
+  function finishGame() {
+    if (state.timerId) clearInterval(state.timerId);
+    clearTimeout(state.flashTimers.left);
+    clearTimeout(state.flashTimers.right);
+
+    const grade = computeGrade();
+    const avgRtSec = state.reactionTimes.length
+      ? state.reactionTimes.reduce((a, b) => a + b, 0) / state.reactionTimes.length / 1000
+      : 0;
+    const avgRt = avgRtSec ? avgRtSec.toFixed(2) : '0.00';
+
+    // === Record keeping: 新纪录判定 ===
+    const recCheck = isNewRecord(state.levelKey, grade, state.score, state.errors, avgRtSec);
+    if (recCheck.isNew) {
+      progress.records[state.levelKey] = { grade, score: state.score, errors: state.errors, avgRt: avgRtSec, ts: Date.now() };
+      progress.best[state.levelKey] = grade;
+    }
+    saveProgress();
+
+    const zone = document.getElementById('grade-zone');
+    const gradeEl = document.getElementById('settle-grade');
+    zone.querySelectorAll('.confetti').forEach(c => c.remove());
+    gradeEl.innerHTML = grade.split('').map(ch => `<span class="grade-letter">${ch}</span>`).join('');
+    zone.className = 'grade-zone';
+    void zone.offsetWidth;
+    zone.classList.add('grade-show', 'grade-' + grade.toLowerCase());
+    if (grade === 'SSS') spawnGradeConfetti(zone);
+    sfx.grade(grade);
+
+    // NEW RECORD 印章 + 追加庆祝
+    const sealEl = document.getElementById('record-seal');
+    sealEl.classList.remove('record-show');
+    void sealEl.offsetWidth;
+    if (recCheck.isNew) {
+      sealEl.textContent = recCheck.kind === 'first' ? '首个纪录' : 'NEW RECORD';
+      sealEl.classList.add('record-show');
+      if (grade !== 'SSS') spawnGradeConfetti(zone, 6); // 低等级破纪录也有小彩带
+      setTimeout(() => sfx.record(), 620);
+    }
+
+    document.getElementById('settle-score').textContent = state.score;
+    document.getElementById('settle-errors').textContent = state.errors;
+    document.getElementById('settle-rt').textContent = `${avgRt}s`;
+    document.getElementById('settle-combo').textContent = state.maxCombo;
+
+    state.settleIdx = 0;
+    showScreen('SETTLEMENT');
+  }
+
+  // === HARDWARE INPUT HANDLERS ===
+  function pulseWire(wireEl, activeClass, labelEl, text) {
+    wireEl.classList.add(activeClass);
+    labelEl.textContent = text;
+    el.hwBusLog.textContent = `SIGNAL BUS: ${text}`;
+    setTimeout(() => {
+      wireEl.classList.remove(activeClass);
+    }, 220);
+  }
+
+  function moveStickVisual(side, dir) {
+    const knob = side === 'left' ? el.stickKnobLeft : el.stickKnobRight;
+    const offsets = {
+      center: 'translate(-50%, -50%)',
+      up: 'translate(-50%, -82%)',
+      down: 'translate(-50%, -18%)',
+      left: 'translate(-82%, -50%)',
+      right: 'translate(-18%, -50%)'
+    };
+    knob.style.transform = offsets[dir] || offsets.center;
+    if (dir !== 'center') {
+      setTimeout(() => { knob.style.transform = offsets.center; }, 180);
+    }
+  }
+
+  function handleJoystick(side, dir) {
+    moveStickVisual(side, dir);
+    const wire = side === 'left' ? el.wireLStick : el.wireRStick;
+    const cls = side === 'left' ? 'wire-active-left' : 'wire-active-right';
+    const lbl = side === 'left' ? el.stateLStick : el.stateRStick;
+    pulseWire(wire, cls, lbl, `${side === 'left' ? 'L' : 'R'}-STICK: ${dir.toUpperCase()}`);
+
+    if (state.screen === 'LEVEL_SELECT') {
+      if (dir === 'left' || dir === 'right') {
+        if (state.menuZone === 'start') {
+          sfx.click();
+          state.menuZone = 'cards';
+        } else {
+          const delta = dir === 'right' ? 1 : -1;
+          const nxt = (state.menuIdx + delta + LEVEL_KEYS.length) % LEVEL_KEYS.length;
+          state.menuIdx = nxt;
+          sfx.menuMove(LEVEL_KEYS[nxt]);
+        }
+        updateMenuFocus();
+        return;
+      }
+      if (dir === 'up' || dir === 'down') {
+        sfx.click();
+        state.menuZone = state.menuZone === 'cards' ? 'start' : 'cards';
+        updateMenuFocus();
+        return;
+      }
+      return;
+    }
+    if (state.screen === 'DURATION_SELECT') {
+      if (dir === 'left' || dir === 'right') {
+        const delta = dir === 'right' ? 1 : -1;
+        state.durationIdx = (state.durationIdx + delta + DURATIONS.length) % DURATIONS.length;
+        sfx.click();
+        updateMenuFocus();
+      }
+      return;
+    }
+    if (state.screen === 'PAUSED') {
+      sfx.click();
+      if (dir === 'up' || dir === 'down') state.pauseIdx = state.pauseIdx === 0 ? 1 : 0;
+      updateMenuFocus();
+      return;
+    }
+    if (state.screen === 'SETTLEMENT') {
+      sfx.click();
+      if (dir === 'left' || dir === 'right') state.settleIdx = state.settleIdx === 0 ? 1 : 0;
+      updateMenuFocus();
+      return;
+    }
+
+    if (state.screen === 'PLAYING' && state[side].active) {
+      sfx.click();
+      state[side].flagDir = dir;
+      renderSide(side);
+    }
+  }
+
+  function handleSubmitButton(side) {
+    const btnEl = side === 'left' ? el.hwBtnLeft : el.hwBtnRight;
+    const wire = side === 'left' ? el.wireLBtn : el.wireRBtn;
+    const cls = side === 'left' ? 'wire-active-left' : 'wire-active-right';
+    const lbl = side === 'left' ? el.stateLBtn : el.stateRBtn;
+
+    btnEl.classList.add('pressed');
+    setTimeout(() => btnEl.classList.remove('pressed'), 120);
+    pulseWire(wire, cls, lbl, `${side === 'left' ? 'L' : 'R'}-BTN: SUBMIT`);
+
+    if (state.screen === 'LEVEL_SELECT') {
+      state.levelKey = LEVEL_KEYS[state.menuIdx];
+      showScreen('DURATION_SELECT');
+      return;
+    }
+    if (state.screen === 'DURATION_SELECT') {
+      launchLevel(state.levelKey, DURATIONS[state.durationIdx]);
+      return;
+    }
+    if (state.screen === 'PAUSED') {
+      if (state.pauseIdx === 0) showScreen('PLAYING');
+      else showScreen('LEVEL_SELECT');
+      return;
+    }
+    if (state.screen === 'SETTLEMENT') {
+      if (state.settleIdx === 0) startLevel(state.levelKey, state.duration);
+      else { pendingStamp = true; showScreen('LEVEL_SELECT'); }
+      return;
+    }
+
+    if (state.screen !== 'PLAYING' || !state[side].active) return;
+
+    const s = state[side];
+    const cfg = LEVELS[state.levelKey];
+    const expected = s.rule === 'sun' ? s.arrow : OPPOSITE[s.arrow];
+    const flagSvg = side === 'left' ? el.flagSvgLeft : el.flagSvgRight;
+
+    if (s.flagDir === expected) {
+      const rt = performance.now() - s.shownAt;
+      sfx.correct(rt);
+      state.score += 1;
+      state.combo += 1;
+      state.maxCombo = Math.max(state.maxCombo, state.combo);
+      state.reactionTimes.push(rt);
+
+      const glow = rt < 500 ? 'glow-ultra' : rt < 800 ? 'glow-fast' : rt < 1800 ? 'glow-correct' : 'glow-slow';
+      flagSvg.classList.remove('flag-bounce', 'glow-ultra', 'glow-fast', 'glow-correct', 'glow-slow');
+      void flagSvg.offsetWidth;
+      flagSvg.classList.add('flag-bounce', glow);
+      if (rt < 500) spawnUltraFlash(side); // 超神速度小闪光
+      el.hudScore.classList.remove('hud-score-pop');
+      void el.hudScore.offsetWidth;
+      el.hudScore.classList.add('hud-score-pop');
+      setTimeout(() => {
+        flagSvg.classList.remove('flag-bounce', 'glow-ultra', 'glow-fast', 'glow-correct', 'glow-slow');
+        el.hudScore.classList.remove('hud-score-pop');
+      }, 450);
+
+      // 连击阶梯：5 连微光粒子、10 连小星花、15 连两面小旗一起跳
+      if (state.combo > 0 && state.combo % 5 === 0) {
+        sfx.combo(state.combo);
+        const tier = state.combo >= 15 ? 3 : state.combo >= 10 ? 2 : 1;
+        spawnComboSparkle(side, tier);
+        if (state.combo % 15 === 0) {
+          [el.flagSvgLeft, el.flagSvgRight].forEach((f) => {
+            if (!f) return;
+            f.classList.remove('flag-bounce');
+            void f.offsetWidth;
+            f.classList.add('flag-bounce');
+          });
+        }
+      }
+      if (state.timeLeft <= 3) sfx.finalShimmer();
+
+      if (!cfg.dual) {
+        const nextSide = Math.random() < 0.5 ? 'left' : 'right';
+        state.left.active = nextSide === 'left';
+        state.right.active = nextSide === 'right';
+        refreshQuestion('left');
+        refreshQuestion('right');
+      } else {
+        refreshQuestion(side);
+      }
+      renderHUD();
+    } else {
+      sfx.wrong();
+      state.errors += 1;
+      state.combo = 0;
+      flagSvg.classList.remove('glow-wrong', 'flag-shake');
+      void flagSvg.offsetWidth;
+      flagSvg.classList.add('glow-wrong', 'flag-shake');
+      setTimeout(() => flagSvg.classList.remove('glow-wrong', 'flag-shake'), 450);
+      renderHUD();
+    }
+  }
+
+  // === PAUSE: 双确认键同按 ≥300ms = 暂停 ===
+  // 真实硬件无 Start/Select 键，双手同时按住两个确认键 ≈0.3s 触发暂停。
+  // 单击确认仍为提交答案；双键同时点按抢答通常 <150ms，不会触发暂停。
+  const pauseHold = { left: 0, right: 0 };
+  const PAUSE_HOLD_MS = 300;
+
+  function checkPauseHold() {
+    if (state.screen !== 'PLAYING' && state.screen !== 'DURATION_SELECT') { pauseHold.left = 0; pauseHold.right = 0; return; }
+    if (pauseHold.left && pauseHold.right) {
+      const held = performance.now() - Math.max(pauseHold.left, pauseHold.right);
+      if (held >= PAUSE_HOLD_MS) {
+        pauseHold.left = 0;
+        pauseHold.right = 0;
+        if (state.screen === 'DURATION_SELECT') showScreen('LEVEL_SELECT');
+        else togglePause();
+      }
+    }
+  }
+
+  // === GAMEPAD BRIDGE (Gamepad API) ===
+  // 手柄、键盘、鼠标共用同一入口：handleJoystick(side, dir) / handleSubmitButton(side)
+  const gp = {
+    on: false,
+    name: '',
+    dead: 0.34,                              // 死区：推过 34% 才算一个方向（离散方向需要更明确）
+    axes: { left: [0, 1], right: [2, 3] },   // 左摇杆=轴0/1，右摇杆=轴2/3
+    invertY: false,                          // 推上变下就把这个改 true
+    confirm: { left: 4, right: 5 },          // 默认 LB(4) / RB(5)；摇杆按下是 10 / 11
+    state: { left: 'center', right: 'center' },
+    capture: null,
+    prev: {}
+  };
+
+  function gpUI(kind, text) {
+    const dot = document.getElementById('gp-dot');
+    const t = document.getElementById('gp-text');
+    if (dot) dot.style.background =
+      kind === 'ok' ? '#34D399' : kind === 'err' ? '#F87171' : kind === 'wait' ? '#F5A623' : '#6B7280';
+    if (t) t.textContent = text;
+  }
+
+  function gpPad() {
+    if (!navigator.getGamepads) return null;
+    const list = navigator.getGamepads();
+    if (!list) return null;
+    for (let i = 0; i < list.length; i++) {
+      const p = list[i];
+      if (p && p.connected) return p;
+    }
+    return null;
+  }
+
+  /* 轴 → 方向：带死区，主/次轴分量接近时不判方向（防止对角线抖） */
+  function gpAxisDir(x, y) {
+    if (Math.hypot(x, y) < gp.dead) return 'center';
+    const ax = Math.abs(x), ay = Math.abs(y);
+    if (ax >= ay) {
+      if (ay > 0 && ax < ay * 1.15) return 'center';   // 太斜，等它再明确一点
+      return x > 0 ? 'right' : 'left';
+    }
+    if (ax > 0 && ay < ax * 1.15) return 'center';
+    return y > 0 ? 'down' : 'up';
+  }
+
+  function gpTick() {
+    const pad = gpPad();
+
+    if (pad) {
+      if (!gp.on || gp.name !== pad.id) {
+        gp.on = true;
+        gp.name = pad.id;
+        gpUI('ok', '手柄已连接 · ' + String(pad.id || '').slice(0, 24));
+        bgmStart(); // 手柄玩家首次交互时启动 BGM（音乐由整机统一管理）
+      }
+      const ax = pad.axes || [];
+      const btns = pad.buttons || [];
+
+      // 1. 两个摇杆 → 方向事件（只在方向变化时发一条）
+      ['left', 'right'].forEach((side) => {
+        const xi = gp.axes[side][0];
+        const yi = gp.axes[side][1];
+        const x = ax[xi] || 0;
+        const y = (ax[yi] || 0) * (gp.invertY ? -1 : 1);
+        const dir = gpAxisDir(x, y);
+        if (dir !== gp.state[side]) {
+          gp.state[side] = dir;
+          if (dir !== 'center') handleJoystick(side, dir);   // 回中不发，游戏不需要"松手"
+        }
+      });
+
+      // 2. 实时轴读数（判断轴索引对不对，一眼就能看出来）
+      const box = document.getElementById('gp-axes');
+      if (box) {
+        const f = (v) => (v >= 0 ? ' ' : '') + v.toFixed(2);
+        box.textContent =
+          'L ' + f(ax[gp.axes.left[0]] || 0) + ',' + f(ax[gp.axes.left[1]] || 0) +
+          ' · R ' + f(ax[gp.axes.right[0]] || 0) + ',' + f(ax[gp.axes.right[1]] || 0);
+      }
+
+      // 3. 确认键
+      if (gp.capture) {
+        for (let i = 0; i < btns.length; i++) {
+          if (btns[i] && btns[i].pressed) {
+            gp.confirm[gp.capture] = i;
+            gp.prev.left = true;
+            gp.prev.right = true;          // 防这次按下顺手触发提交
+            if (gp.capture === 'left') {
+              gp.capture = 'right';
+              gpUI('wait', '左=' + i + ' 已记录 · 现在按「右手确认键」');
+            } else {
+              gp.capture = null;
+              gpUI('ok', '绑定完成 · 左=' + gp.confirm.left + ' 右=' + gp.confirm.right + '（刷新页面会回到默认）');
+            }
+            break;
+          }
+        }
+      } else {
+        ['left', 'right'].forEach((side) => {
+          const b = btns[gp.confirm[side]];
+          const down = !!(b && (b.pressed || b.value > 0.55));
+          pauseHold[side] = down ? performance.now() : 0;   // 记录按住时刻（双键同按 = 暂停）
+          if (down && !gp.prev[side]) handleSubmitButton(side);   // 取"刚按下"的边沿
+          gp.prev[side] = down;
+        });
+      }
+
+      // 4. Start(键9) 切换暂停
+      const startB = btns[9];
+      const startDown = !!(startB && startB.pressed);
+      if (startDown && !gp.prev.start) togglePause();
+      gp.prev.start = startDown;
+
+    } else if (gp.on) {
+      gp.on = false;
+      gp.state.left = 'center';
+      gp.state.right = 'center';
+      const box = document.getElementById('gp-axes');
+      if (box) box.textContent = '';
+      gpUI('err', '手柄已断开 · 按一下手柄任意键重连');
+    }
+
+    checkPauseHold();
+    requestAnimationFrame(gpTick);
+  }
+
+  // 有些浏览器要等一次按键才让手柄对页面可见，这里主动提示
+  window.addEventListener('gamepadconnected', (e) => {
+    gp.on = false;
+    gpUI('ok', '手柄已连接 · ' + String(e.gamepad.id || '').slice(0, 24));
+  });
+  window.addEventListener('gamepaddisconnected', () => {
+    gp.on = false;
+    gpUI('err', '手柄已断开 · 按一下手柄任意键重连');
+  });
+
+  document.getElementById('gp-assign-btn').addEventListener('click', () => {
+    if (!gp.on) {
+      gpUI('err', '还没检测到手柄：先按一下手柄上的任意键');
+      return;
+    }
+    gp.capture = 'left';
+    gpUI('wait', '请按下「左手确认键」…');
+  });
+
+  requestAnimationFrame(gpTick);
+
+  // === KEYBOARD & POINTER BINDINGS ===
+  window.addEventListener('keydown', (e) => {
+    bgmStart(); // 首次键盘交互时启动 BGM（浏览器自动播放策略）
+    const k = e.key.toLowerCase();
+    // 记录确认键按住时刻（供"双键同按 ≥300ms = 暂停"检测）
+    if (k === 'f' || k === ' ') pauseHold.left = performance.now();
+    else if (k === 'enter') pauseHold.right = performance.now();
+    if (e.repeat) return; // 物理按键不会自动重复，忽略系统 repeat 事件
+    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) {
+      e.preventDefault();
+    }
+    if (k === 'w') handleJoystick('left', 'up');
+    else if (k === 's') handleJoystick('left', 'down');
+    else if (k === 'a') handleJoystick('left', 'left');
+    else if (k === 'd') handleJoystick('left', 'right');
+    else if (k === 'f' || k === ' ') handleSubmitButton('left');
+    else if (k === 'arrowup') handleJoystick('right', 'up');
+    else if (k === 'arrowdown') handleJoystick('right', 'down');
+    else if (k === 'arrowleft') handleJoystick('right', 'left');
+    else if (k === 'arrowright') handleJoystick('right', 'right');
+    else if (k === 'enter') handleSubmitButton('right');
+    else if (k === 'escape') togglePause();
+  });
+
+  window.addEventListener('keyup', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'f' || k === ' ') pauseHold.left = 0;
+    else if (k === 'enter') pauseHold.right = 0;
+  });
+
+  function bindStickPointer(wellId, side) {
+    const well = document.getElementById(wellId);
+    let dragging = false;
+    function detect(clientX, clientY) {
+      const rect = well.getBoundingClientRect();
+      const dx = clientX - (rect.left + rect.width / 2);
+      const dy = clientY - (rect.top + rect.height / 2);
+      if (Math.hypot(dx, dy) < 12) return;
+      if (Math.abs(dx) > Math.abs(dy)) handleJoystick(side, dx > 0 ? 'right' : 'left');
+      else handleJoystick(side, dy > 0 ? 'down' : 'up');
+    }
+    well.addEventListener('pointerdown', (e) => { dragging = true; detect(e.clientX, e.clientY); });
+    window.addEventListener('pointerup', () => { dragging = false; });
+    well.addEventListener('pointermove', (e) => { if (dragging) detect(e.clientX, e.clientY); });
+  }
+
+  bindStickPointer('stick-well-left', 'left');
+  bindStickPointer('stick-well-right', 'right');
+
+  el.hwBtnLeft.addEventListener('click', () => handleSubmitButton('left'));
+  el.hwBtnRight.addEventListener('click', () => handleSubmitButton('right'));
+
+  // 演示台确认按钮：记录按住时刻（真实产品为物理按键输入，此处保持一致的暂停检测）
+  ['left', 'right'].forEach((side) => {
+    const btnEl = side === 'left' ? el.hwBtnLeft : el.hwBtnRight;
+    btnEl.addEventListener('pointerdown', () => { pauseHold[side] = performance.now(); });
+    const release = () => { pauseHold[side] = 0; };
+    btnEl.addEventListener('pointerup', release);
+    btnEl.addEventListener('pointercancel', release);
+    btnEl.addEventListener('pointerleave', release);
+  });
+
+  function togglePause() {
+    if (state.screen === 'PLAYING') {
+      state.pauseIdx = 0;
+      showScreen('PAUSED');
+    } else if (state.screen === 'PAUSED') {
+      pauseHold.left = 0;  // 清除暂停前的按键状态，避免恢复后立刻再次触发暂停
+      pauseHold.right = 0;
+      showScreen('PLAYING');
+    } else if (state.screen === 'DURATION_SELECT') {
+      pauseHold.left = 0;
+      pauseHold.right = 0;
+      showScreen('LEVEL_SELECT');
+    }
+  }
+
+  // 浏览器要求首次交互后才允许出声：第一次点击时启动 BGM
+  document.addEventListener('pointerdown', () => { bgmStart(); }, { once: true });
+
+  // Allow mouse clicks on menu/pause/settlement cards for convenience
+  document.querySelectorAll('.level-card').forEach((card, idx) => {
+    card.addEventListener('click', () => {
+      state.menuIdx = idx;
+      state.levelKey = card.dataset.level;
+      state.menuZone = 'cards';
+      updateMenuFocus();
+      showScreen('DURATION_SELECT');
+    });
+  });
+  document.querySelectorAll('.duration-card').forEach((card, idx) => {
+    card.addEventListener('click', () => {
+      state.durationIdx = idx;
+      updateMenuFocus();
+      launchLevel(state.levelKey, DURATIONS[state.durationIdx]);
+    });
+  });
+document.getElementById('pause-resume').addEventListener('click', () => showScreen('PLAYING'));
+  document.getElementById('pause-quit').addEventListener('click', () => showScreen('LEVEL_SELECT'));
+  document.getElementById('settle-retry').addEventListener('click', () => startLevel(state.levelKey, state.duration));
+  document.getElementById('settle-menu').addEventListener('click', () => {
+    pendingStamp = true;
+    showScreen('LEVEL_SELECT');
+  });
+
+  window.onload = () => {
+    renderHUD();
+    showScreen('LEVEL_SELECT');
+  };
+})();
+</script>
+</body>
+</html>
